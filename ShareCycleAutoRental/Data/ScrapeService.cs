@@ -77,20 +77,42 @@ namespace ShareCycleAutoRental.Data
             }
 
             //駐輪一覧取得
-            var portMain = searchPlaceResult.ResultObject.GetElementsByClassName("main_inner_wide").FirstOrDefault();
-            var portList = portMain.GetElementsByClassName("sp_view").FirstOrDefault().QuerySelectorAll("form");
+            var searchDocument = searchPlaceResult.ResultObject;
             CyclePortInfo cyclePortInfo = null;
             {
-                foreach (var p in portList)
+                var searchFinished = false;
+                while (searchFinished == false)
                 {
-                    var portAtag = p.GetElementsByTagName("a").FirstOrDefault();
-                    var splitedPort = portAtag.InnerHtml.Split(new string[] { "< br >", "<br>", "<br/>", "<br />", "< br>", "<br >" }, StringSplitOptions.None);
-
-                    //ポート名で検索
-                    if (splitedPort[0].Contains(scrapeCondition.Port))
+                    var portMain = searchDocument.GetElementsByClassName("main_inner_wide").FirstOrDefault();
+                    var portList = portMain.GetElementsByClassName("sp_view").FirstOrDefault().QuerySelectorAll("form");
+                    foreach (var p in portList)
                     {
-                        cyclePortInfo = new CyclePortInfo() { PortName = splitedPort[0], PortNameEnglish = splitedPort[1], PortQuantity = splitedPort[2], Element = p as IHtmlFormElement };
-                        break;
+                        var portAtag = p.GetElementsByTagName("a").FirstOrDefault();
+                        var splitedPort = portAtag.InnerHtml.Split(new string[] { "< br >", "<br>", "<br/>", "<br />", "< br>", "<br >" }, StringSplitOptions.None);
+
+                        //ポート名で検索
+                        if (splitedPort[0].Contains(scrapeCondition.Port))
+                        {
+                            cyclePortInfo = new CyclePortInfo() { PortName = splitedPort[0], PortNameEnglish = splitedPort[1], PortQuantity = splitedPort[2], Element = p as IHtmlFormElement };
+                            searchFinished = true;
+                            break;
+                        }
+                    }
+
+                    if (searchFinished == false)
+                    {
+                        var nextPageArea = searchDocument.GetElementsByClassName("mt20").FirstOrDefault()?.GetElementsByClassName("main_inner_wide_right").FirstOrDefault();
+                        if (nextPageArea == null)
+                        {
+                            searchFinished = true;
+                            break;
+                        }
+                        else
+                        {//次のページを探す
+                            var nextPageForm = nextPageArea.QuerySelector("form") as IHtmlFormElement;
+                            searchDocument = await nextPageForm.SubmitAsync();
+                            System.Threading.Thread.Sleep(ScrapeSpan);
+                        }
                     }
                 }
             }
@@ -130,6 +152,8 @@ namespace ShareCycleAutoRental.Data
         {
             try
             {
+                if (string.IsNullOrEmpty(searchCondition))
+                    searchCondition = "すべて";
                 var submit = portDocument.GetElementsByName(formName).FirstOrDefault() as IHtmlFormElement;
                 var select = portDocument.GetElementById(selID) as IHtmlSelectElement;
                 var option = select.Options.Where(x => x.Text.Contains(searchCondition)).FirstOrDefault();

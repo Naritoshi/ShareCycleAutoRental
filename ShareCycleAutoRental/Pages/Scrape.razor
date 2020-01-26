@@ -16,7 +16,10 @@
 <div>
     <input placeholder="Port" @bind="@condition.Port">
 </div>
-<button @onclick="fetch">スクレイピング</button>
+<div>
+    <input placeholder="Execution Minutes" @bind="@time">
+</div>
+<button @onclick="fetch" disabled="@buttonDisabled">スクレイピング</button>
 
 @if (scrapeContents != null)
 {
@@ -27,6 +30,8 @@
 
 @code{
     private int time = 5;
+    private DateTime endTime;
+    private bool buttonDisabled = false;
     private string waitMessage = "";
     private BikeInfo scrapeContents = null;
     private LoginInfo loginInfo = new LoginInfo();
@@ -36,42 +41,94 @@
         Place = "京橋",
         Port = "B2-11"
     };
+    private static System.Timers.Timer continueTimer;
 
-    private async Task fetch()
+    private void fetch()
     {
+        endTime = DateTime.Now.AddMinutes(time);
+        buttonDisabled = true;
+
         waitMessage = "検索中....";
         scrapeContents = null;
 
-        // タイトルを取得したいサイトのURL
-        var result = await ScrapeService.ScrapeShareAsync(loginInfo, condition);
+        continueTimer = new System.Timers.Timer(1000);
+        continueTimer.Elapsed += OnTimedEvent;
+        continueTimer.Enabled = true;
+    }
 
+    private void OnTimedEvent(object sender, System.Timers.ElapsedEventArgs e)
+    {
+        continueTimer.Enabled = false;
+
+        //一定間隔過ぎてたらやめる
+        if (DateTime.Now > endTime)
+        {
+            continueTimer.Stop();
+            continueTimer.Dispose();
+            buttonDisabled = false;
+            waitMessage = "時間内に借りることができませんでした。";
+            return;
+        }
+
+        // スクレイピング
+        var result = ScrapeService.ScrapeShareAsync(loginInfo, condition).Result;
+
+        //結果解析
+        var donext = analyzeResult(result);
+
+        switch (donext)
+        {
+            case ScrapeResult.error:
+                continueTimer.Stop();
+                continueTimer.Dispose();
+                waitMessage = result.Message;
+                buttonDisabled = false;
+                break;
+            case ScrapeResult.compleate:
+                scrapeContents = result.ResultObject;
+                if (scrapeContents == null)
+                    waitMessage = "存在しませんでした。";
+                else
+                    waitMessage = "";
+                continueTimer.Stop();
+                continueTimer.Dispose();
+                buttonDisabled = false;
+                break;
+            case ScrapeResult.canContinue:
+                waitMessage = result.Message;
+                continueTimer.Enabled = true;
+                break;
+        }
+
+        waitMessage = $"{DateTime.Now} : {waitMessage}";
+
+        //画面再描画
+        InvokeAsync(() => StateHasChanged());
+    }
+
+    private ScrapeResult analyzeResult(Result<BikeInfo> result)
+    {
         if (result.HasError)
         {
-            waitMessage = result.Message;
+            if (result.Message.Contains("IDまたはパスワードが異なります。"))
+            {
+                return ScrapeResult.error;
+            }
+            else
+            {
+                return ScrapeResult.canContinue;
+            }
         }
         else
         {
-            scrapeContents = result.ResultObject;
-            if (scrapeContents == null)
-                waitMessage = "存在しませんでした。";
-            else
-                waitMessage = "";
+            return ScrapeResult.compleate;
         }
     }
 
-    /// <summary>
-    /// 公開鍵を使って文字列を暗号化する
-    /// </summary>
-    /// <param name="str">暗号化する文字列</param>
-    /// <param name="publicKey">暗号化に使用する公開鍵(XML形式)</param>
-    /// <returns>暗号化された文字列</returns>
-    private static string Encrypt(string str, string publicKey)
+    private enum ScrapeResult
     {
-        System.Security.Cryptography.RSACryptoServiceProvider rsa =
-            new System.Security.Cryptography.RSACryptoServiceProvider();
-        rsa.FromXmlString(publicKey);
-        byte[] data = System.Text.Encoding.UTF8.GetBytes(str);
-        byte[] encryptedData = rsa.Encrypt(data, false);
-        return System.Convert.ToBase64String(encryptedData);
+        compleate,
+        canContinue,
+        error,
     }
 }
