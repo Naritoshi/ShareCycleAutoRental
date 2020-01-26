@@ -1,0 +1,77 @@
+﻿@page "/"
+
+@using ShareCycleAutoRental.Data
+@inject ScrapeService ScrapeService
+
+    <h2>シェアサイクル自動レンタル</h2>
+
+<div>
+    <input placeholder="UserID" @bind="@loginInfo.UserID">
+    <input placeholder="Password" type="password" @bind="@loginInfo.Password">
+</div>
+<div>
+    <input placeholder="Area" @bind="@condition.Area">
+    <input placeholder="Place" @bind="@condition.Place">
+</div>
+<div>
+    <input placeholder="Port" @bind="@condition.Port">
+</div>
+<button @onclick="fetch">スクレイピング</button>
+
+@if (scrapeContents != null)
+{
+    <h2>@scrapeContents.BikeName を借りました。</h2>
+}
+
+<h2>@waitMessage</h2>
+
+@code{
+    private int time = 5;
+    private string waitMessage = "";
+    private BikeInfo scrapeContents = null;
+    private LoginInfo loginInfo = new LoginInfo();
+    private ScrapeCondition condition = new ScrapeCondition()
+    {
+        Area = "中央",
+        Place = "京橋",
+        Port = "B2-11"
+    };
+
+    private async Task fetch()
+    {
+        waitMessage = "検索中....";
+        scrapeContents = null;
+
+        // タイトルを取得したいサイトのURL
+        var result = await ScrapeService.ScrapeShareAsync(loginInfo, condition);
+
+        if (result.HasError)
+        {
+            waitMessage = result.Message;
+        }
+        else
+        {
+            scrapeContents = result.ResultObject;
+            if (scrapeContents == null)
+                waitMessage = "存在しませんでした。";
+            else
+                waitMessage = "";
+        }
+    }
+
+    /// <summary>
+    /// 公開鍵を使って文字列を暗号化する
+    /// </summary>
+    /// <param name="str">暗号化する文字列</param>
+    /// <param name="publicKey">暗号化に使用する公開鍵(XML形式)</param>
+    /// <returns>暗号化された文字列</returns>
+    private static string Encrypt(string str, string publicKey)
+    {
+        System.Security.Cryptography.RSACryptoServiceProvider rsa =
+            new System.Security.Cryptography.RSACryptoServiceProvider();
+        rsa.FromXmlString(publicKey);
+        byte[] data = System.Text.Encoding.UTF8.GetBytes(str);
+        byte[] encryptedData = rsa.Encrypt(data, false);
+        return System.Convert.ToBase64String(encryptedData);
+    }
+}

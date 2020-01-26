@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29709.97
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShareCycleAutoRental", "ShareCycleAutoRental\ShareCycleAutoRental.csproj", "{8681BDDA-0B4E-4A67-BB59-6573FAB7916C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8681BDDA-0B4E-4A67-BB59-6573FAB7916C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8681BDDA-0B4E-4A67-BB59-6573FAB7916C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8681BDDA-0B4E-4A67-BB59-6573FAB7916C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8681BDDA-0B4E-4A67-BB59-6573FAB7916C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {5678E4F4-3DA4-4E2C-9500-52AAF0B42E6A}
+	EndGlobalSection
+EndGlobal
